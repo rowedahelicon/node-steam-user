@@ -59,7 +59,10 @@ function SteamChatRoomClient(user) {
 			body.mentions = processChatMentions(body.mentions);
 		}
 
+		body.message_no_bbcode = body.message_no_bbcode || body.message;
+		delete body.rtime32_server_timestamp;
 		this.emit('chatMessage', body);
+		this.user._emitIdEvent('groupChatMessage', body.steamid_sender, body.message_no_bbcode, body.chat_group_id, body.chat_id);
 	};
 
 	this.user._handlers['ChatRoomClient.NotifyChatMessageModified#1'] = (body) => {
