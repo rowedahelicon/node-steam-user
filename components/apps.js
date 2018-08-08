@@ -1,9 +1,8 @@
-const BinaryKVParser = require('binarykvparser');
+const SteamUser = require('../index.js');
 const SteamID = require('steamid');
 const VDF = require('vdf');
-
+const BinaryKVParser = require('binarykvparser');
 const Helpers = require('./helpers.js');
-const SteamUser = require('../index.js');
 
 const PICSRequestType = {
 	"User": 0,
@@ -31,7 +30,7 @@ SteamUser.prototype.gamesPlayed = function(apps, force) {
 	}
 
 	function doTheThing() {
-		self._send(SteamUser.EMsg.ClientGamesPlayed, apps.map((app) => {
+		self._send(SteamUser.EMsg.ClientGamesPlayed, {"games_played":apps.map((app) => {
 			if (typeof app === 'string') {
 				return {
 					"game_id": "15190414816125648896",
@@ -44,7 +43,7 @@ SteamUser.prototype.gamesPlayed = function(apps, force) {
 			}
 
 			return {"game_id": app};
-		}));
+		})});
 	}
 };
 
@@ -55,6 +54,7 @@ SteamUser.prototype.gamesPlayed = function(apps, force) {
 SteamUser.prototype.kickPlayingSession = function(callback) {
 	this._send(SteamUser.EMsg.ClientKickPlayingSession, {});
 	this.once('playingState', function(blocked, playingApp) {
+		console.log(playingApp);
 		if (!callback) {
 			return;
 		}
@@ -157,10 +157,10 @@ SteamUser.prototype.getProductInfo = function(apps, packages, inclTokens, callba
 					"missingToken": !!app.missing_token,
 					"appinfo": VDF.parse(app.buffer.toString('utf8')).appinfo
 				};
-
+				var self = this;
 				if ((!cache.apps[app.appid] && requestType == PICSRequestType.Changelist) || (cache.apps[app.appid] && cache.apps[app.appid].changenumber != data.changenumber)) {
 					// Only emit the event if we previously didn't have the appinfo, or if the changenumber changed
-					this.emit('appUpdate', app.appid, data);
+					self.emit('appUpdate', app.appid, data);
 				}
 
 				cache.apps[app.appid] = data;
@@ -176,7 +176,7 @@ SteamUser.prototype.getProductInfo = function(apps, packages, inclTokens, callba
 				};
 
 				if ((!cache.packages[pkg.packageid] && requestType == PICSRequestType.Changelist) || (cache.packages[pkg.packageid] && cache.packages[pkg.packageid].changenumber != data.changenumber)) {
-					this.emit('packageUpdate', pkg.packageid, data);
+					self.emit('packageUpdate', pkg.packageid, data);
 				}
 
 				cache.packages[pkg.packageid] = data;
@@ -186,7 +186,7 @@ SteamUser.prototype.getProductInfo = function(apps, packages, inclTokens, callba
 				// Request info for all the apps in this package, if this request didn't originate from the license list
 				if (requestType != PICSRequestType.Licenses) {
 					var appids = (pkg.packageinfo || {}).appids || [];
-					this.getProductInfo(appids, [], false, null, PICSRequestType.PackageContents);
+					self.getProductInfo(appids, [], false, null, PICSRequestType.PackageContents);
 				}
 			});
 		}
